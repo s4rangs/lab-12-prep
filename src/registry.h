@@ -59,7 +59,9 @@ public:
         mValid.reserve(capacity);
     }
 
-    size_t containerSize() const { return mStorage.size(); }
+    size_t containerSize() const { 
+        return mStorage.size(); 
+    }
 
 private:
     std::vector<T> mStorage;

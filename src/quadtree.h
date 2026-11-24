@@ -179,6 +179,59 @@ public:
     // Returns the number of intersection candidates found
     uint32_t queryIntersecting(const AABB<float>& queryBounds, std::vector<uint32_t>& candidates) {
         // TODO -- do not use recursion, but you may emulate it yourself.
+        struct StackFrame {
+            uint32_t nodeIdx;
+            AABB<float> cellBounds;
+        };
+
+        std::vector<StackFrame> stack;
+        stack.push_back({0, mBounds});
+
+        uint32_t found = 0;
+
+        while (!stack.empty()) {
+            StackFrame frame = stack.back();
+            stack.pop_back();
+
+            const QuadTreeNode& node = mNodes[frame.nodeIdx];
+
+            // skip cells that don't overlap the query
+            if (!queryBounds.intersects(frame.cellBounds)) {
+                continue;
+            }
+
+            // check primitives stored in this node
+            uint32_t primitiveIdx = node.primitivesIdx;
+
+            while (primitiveIdx != INVALID_IDX) {
+                if (queryBounds.intersects(mPrimitiveBounds[primitiveIdx])) {
+                    candidates.push_back(primitiveIdx);
+                    found++;
+                }
+
+                primitiveIdx = mNextPrimitiveIdx[primitiveIdx];
+            }
+
+            // leaf nodes have no children
+            if (node.isLeaf()) {
+                continue;
+            }
+
+            // check all four children
+            for (uint32_t dir = 0; dir < 4; dir++) {
+                AABB<float> childBounds = frame.cellBounds;
+                aabbEnter(childBounds, static_cast<OrdinalDirection>(dir));
+
+                if (queryBounds.intersects(childBounds)) {
+                    stack.push_back({
+                        node.childIdx + dir,
+                        childBounds
+                    });
+                }
+            }
+        }
+
+        return found;
         return 0;
     }
 
@@ -288,16 +341,53 @@ private:
     // OrdinalDirection::INVALID.
     // Precondition: query is not empty. You may assume a priori that currentCell is not empty.
     // Precondition: currentCell contains query.
-    OrdinalDirection aabbQueryQuadrant(const AABB<float>& query,
-                                       const AABB<float>& currentCell) const {
-        return {};
+    OrdinalDirection aabbQueryQuadrant(const AABB<float>& query, const AABB<float>& currentCell) const {
+        auto middle = currentCell.middle();
+
+        bool left = query.maxPoint.x <= middle.x;
+        bool right = query.minPoint.x >= middle.x;
+        bool top = query.maxPoint.y <= middle.y;
+        bool bottom = query.minPoint.y >= middle.y;
+
+        if (left && top) return NW;
+        if (right && top) return NE;
+        if (left && bottom) return SW;
+        if (right && bottom) return SE;
+
+        return INVALID_DIRECTION;
+        //return {};
     };
     // TODO
 
     // modifies a given AABB to obtain the resulting AABB if we were entering the cell on its
     // "direction" quadrant
     // Precondition: direction is not INVALID
-    void aabbEnter(AABB<float>& bounds, OrdinalDirection direction) const {};
+    void aabbEnter(AABB<float>& bounds, OrdinalDirection direction) const {
+        auto middle = bounds.middle();
+
+        switch (direction) {
+            case NW:
+                bounds.maxPoint = middle;
+                break;
+
+            case NE:
+                bounds.minPoint.x = middle.x;
+                bounds.maxPoint.y = middle.y;
+                break;
+
+            case SW:
+                bounds.minPoint.y = middle.y;
+                bounds.maxPoint.x = middle.x;
+                break;
+
+            case SE:
+                bounds.minPoint = middle;
+                break;
+
+            default:
+                break;
+        }
+    };
     // TODO
 
     AABB<float> mBounds;

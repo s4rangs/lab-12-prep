@@ -1,3 +1,3 @@
-a.
-b.
-c.
+a. Adversarial sequence would make quadtree unbalanced by placing points increasingly closer to same corner making it repeatedly subdivide the same area. A query in an area opposite from the clustered points could run in O(1) time since it only needs to visit a couple of nodes. But a query that includes clustered points could take O(n) time because it would have to examine many of them.
+b. If the same point is repeatedly inserted, quadtree keeps subdiving the same region because the same points all have the same location. We can prevent this by setting a max depth or allowing leaf to hold more than 8 primitive points when they cannot be separated.
+c. Translation can make objects to move into diff quadrants while rotation can change how obkects are distributed across the tree. This might need the quadtree to be either updated or rebuilt. Quadtrees are more for scenarios where objects move very little relative to scenarios with often larger rotations/movement.
